@@ -33,14 +33,21 @@ namespace LoginApp
             string userPass = txtPassword.Text.Trim();
 
            
-            string correctEmail = "0030168@huce.edu.vn";
-            string correctMSSV = "0030168";
+            string correctEmail = "123";
+            string correctMSSV = "12";
 
             
             if (userEmail == correctEmail && userPass == correctMSSV)
             {
                 
                 MessageBox.Show("Đăng nhập thành công", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                FormMain frmMain = new FormMain();
+                this.Hide();           // Ẩn màn hình đăng nhập
+                frmMain.ShowDialog();  // Mở màn hình chính lên (chờ đến khi nó đóng)
+
+                // Khi FormMain đóng (tức là ấn Đăng xuất), nó sẽ chạy tiếp dòng lệnh dưới
+                this.Show();           // Hiện lại màn hình đăng nhập
+                txtPassword.Text = ""; // Xóa trắng ô pass cho an toàn
             }
             else
             {
