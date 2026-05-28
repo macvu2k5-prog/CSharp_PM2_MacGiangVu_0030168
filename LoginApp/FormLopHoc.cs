@@ -12,6 +12,7 @@ namespace LoginApp
 {
     public partial class FormLopHoc : Form
     {
+        databaseDataContext db = new databaseDataContext();
         // === 1. KHAI BÁO CÁC BIẾN TOÀN CỤC ===
         private int currentPage = 1;
         private int pageSize = 5;
@@ -23,68 +24,69 @@ namespace LoginApp
         {
             InitializeComponent();
 
-            // -------------------------------------------------------------
-            // THỦ THUẬT: Ép buộc kết nối sự kiện (Trị dứt điểm lỗi đứt gãy nút bấm)
-            // -------------------------------------------------------------
             this.btnSua.Click -= new System.EventHandler(this.btnSua_Click);
             this.btnSua.Click += new System.EventHandler(this.btnSua_Click);
 
-            // Ép bảng dùng CellClick (bấm đâu trong ô cũng ăn) thay vì CellContentClick
             this.dgvLopHoc.CellClick -= new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvLopHoc_CellContentClick);
             this.dgvLopHoc.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvLopHoc_CellContentClick);
-            // -------------------------------------------------------------
 
-            LoadDuLieuGia(); // Khởi tạo khung dữ liệu
+            txtMaID.Enabled = false;
+
             HienThiDuLieuLenBang("");
         }
 
-        // === 2. CÁC HÀM XỬ LÝ DỮ LIỆU ===
-        private void LoadDuLieuGia()
-        {
-            // Tạo cấu trúc cột cho DataTable
-            dtToanBoLopHoc.Columns.Add("MaID");
-            dtToanBoLopHoc.Columns.Add("MaLop");
-            dtToanBoLopHoc.Columns.Add("TenLop");
-            dtToanBoLopHoc.Columns.Add("GhiChu");
-
-            // Khởi tạo sẵn 2 lớp giống trong ảnh mẫu của ông để dễ test
-            dtToanBoLopHoc.Rows.Add("1", "68PM1", "Lớp 68PM1", "abc");
-            dtToanBoLopHoc.Rows.Add("2", "68PM2", "Lớp 68PM2", "xyz");
-        }
-
+        // ==============================
+        // HIỂN THỊ DANH SÁCH LỚP HỌC
+        // ==============================
         private void HienThiDuLieuLenBang(string tuKhoa)
         {
             dgvLopHoc.Rows.Clear();
 
-            // Lọc dữ liệu theo từ khóa tìm kiếm
-            var duLieuDaLoc = dtToanBoLopHoc.AsEnumerable().Where(row =>
-                row["MaID"].ToString().ToLower().Contains(tuKhoa.ToLower()) ||
-                row["MaLop"].ToString().ToLower().Contains(tuKhoa.ToLower()) ||
-                row["TenLop"].ToString().ToLower().Contains(tuKhoa.ToLower())
-            ).ToList();
+            var query = db.tbl_lophocs.AsQueryable();
 
-            // Phân trang
-            totalRecords = duLieuDaLoc.Count;
-            totalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
-            if (totalPages == 0) totalPages = 1;
-
-            if (currentPage > totalPages) currentPage = totalPages;
-
-            int soDongCanBoQua = (currentPage - 1) * pageSize;
-            var duLieuTrangHienTai = duLieuDaLoc.Skip(soDongCanBoQua).Take(pageSize);
-
-            foreach (var row in duLieuTrangHienTai)
+            if (!string.IsNullOrWhiteSpace(tuKhoa))
             {
-                dgvLopHoc.Rows.Add(row["MaID"], row["MaLop"], row["TenLop"], row["GhiChu"]);
+                query = query.Where(lh =>
+                    lh.MaID.ToString().Contains(tuKhoa) ||
+                    lh.MaLop.Contains(tuKhoa) ||
+                    lh.TenLop.Contains(tuKhoa) ||
+                    lh.GhiChu.Contains(tuKhoa)
+                );
+            }
+
+            totalRecords = query.Count();
+            totalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
+
+            if (totalPages == 0)
+                totalPages = 1;
+
+            if (currentPage > totalPages)
+                currentPage = totalPages;
+
+            var dsLopHoc = query
+                .OrderBy(lh => lh.MaID)
+                .Skip((currentPage - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            foreach (var lh in dsLopHoc)
+            {
+                dgvLopHoc.Rows.Add(
+                    lh.MaID,
+                    lh.MaLop,
+                    lh.TenLop,
+                    lh.GhiChu
+                );
             }
         }
 
-        // === 3. LOGIC CHÍNH: BẤM VÀO BẢNG -> DỮ LIỆU VỌT LÊN GROUPBOX ===
+        // ==============================
+        // CLICK VÀO BẢNG
+        // ==============================
         private void dgvLopHoc_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             int i = e.RowIndex;
 
-            // Kiểm tra xem có bấm đúng vào dòng có dữ liệu không
             if (i >= 0 && i < dgvLopHoc.Rows.Count)
             {
                 DataGridViewRow row = dgvLopHoc.Rows[i];
@@ -96,91 +98,151 @@ namespace LoginApp
                     txtTenLop.Text = row.Cells[2].Value?.ToString();
                     txtGhiChu.Text = row.Cells[3].Value?.ToString();
 
-                    // Khóa ô Mã ID lại để lúc sửa không lỡ tay gõ nhầm làm hỏng liên kết
                     txtMaID.Enabled = false;
                 }
             }
         }
 
-        // === 4. CÁC NÚT CHỨC NĂNG (CRUD) ===
+        // ==============================
+        // THÊM LỚP HỌC
+        // ==============================
         private void btnThem_Click(object sender, EventArgs e)
         {
-            if (txtMaID.Text == "" || txtMaLop.Text == "")
+            if (txtMaLop.Text == "" || txtTenLop.Text == "")
             {
-                MessageBox.Show("Vui lòng nhập đủ Mã ID và Mã lớp!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng nhập Mã lớp và Tên lớp!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Kiểm tra trùng mã
-            bool trungMa = dtToanBoLopHoc.AsEnumerable().Any(row => row["MaID"].ToString() == txtMaID.Text);
-            if (trungMa)
+            var kt = db.tbl_lophocs.FirstOrDefault(lh => lh.MaLop == txtMaLop.Text.Trim());
+
+            if (kt != null)
             {
-                MessageBox.Show("Mã ID này đã tồn tại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Mã lớp này đã tồn tại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            dtToanBoLopHoc.Rows.Add(txtMaID.Text, txtMaLop.Text, txtTenLop.Text, txtGhiChu.Text);
+            tbl_lophoc lopMoi = new tbl_lophoc();
 
-            currentPage = int.MaxValue;
+            lopMoi.MaLop = txtMaLop.Text.Trim();
+            lopMoi.TenLop = txtTenLop.Text.Trim();
+            lopMoi.GhiChu = txtGhiChu.Text.Trim();
+
+            db.tbl_lophocs.InsertOnSubmit(lopMoi);
+            db.SubmitChanges();
+
+            MessageBox.Show("Thêm lớp học thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
             HienThiDuLieuLenBang(txtTimKiem.Text);
             btnLamMoi_Click(sender, e);
         }
 
+        // ==============================
+        // SỬA LỚP HỌC
+        // ==============================
         private void btnSua_Click(object sender, EventArgs e)
         {
-            string maID = txtMaID.Text.Trim();
-
-            if (string.IsNullOrEmpty(maID))
+            if (txtMaID.Text == "")
             {
-                MessageBox.Show("Vui lòng bấm vào 1 lớp trên bảng dữ liệu trước!", "Nhắc nhở", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn lớp học cần sửa!", "Nhắc nhở", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            bool daCapNhat = false;
+            int maID = int.Parse(txtMaID.Text);
 
-            // Quét dữ liệu gốc để cập nhật thông tin mới
-            foreach (DataRow row in dtToanBoLopHoc.Rows)
-            {
-                if (row["MaID"].ToString() == maID)
-                {
-                    row["MaLop"] = txtMaLop.Text.Trim();
-                    row["TenLop"] = txtTenLop.Text.Trim();
-                    row["GhiChu"] = txtGhiChu.Text.Trim();
+            var lop = db.tbl_lophocs.FirstOrDefault(lh => lh.MaID == maID);
 
-                    daCapNhat = true;
-                    break;
-                }
-            }
-
-            if (daCapNhat)
-            {
-                MessageBox.Show("Cập nhật thông tin thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                HienThiDuLieuLenBang(txtTimKiem.Text);
-                btnLamMoi_Click(sender, e); // Làm mới ô nhập và mở khóa Mã ID
-            }
-            else
+            if (lop == null)
             {
                 MessageBox.Show("Không tìm thấy lớp học trong cơ sở dữ liệu!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
+
+            string maLopCu = lop.MaLop;
+            string maLopMoi = txtMaLop.Text.Trim();
+
+            var ktTrung = db.tbl_lophocs.FirstOrDefault(lh => lh.MaLop == maLopMoi && lh.MaID != maID);
+
+            if (ktTrung != null)
+            {
+                MessageBox.Show("Mã lớp này đã tồn tại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Nếu lớp đã có sinh viên thì không cho đổi Mã lớp
+            bool coSinhVien = db.tbl_sinhviens.Any(sv => sv.MaLop == maLopCu);
+
+            if (coSinhVien && maLopCu != maLopMoi)
+            {
+                MessageBox.Show("Không thể đổi Mã lớp vì lớp này đang có sinh viên!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            lop.MaLop = maLopMoi;
+            lop.TenLop = txtTenLop.Text.Trim();
+            lop.GhiChu = txtGhiChu.Text.Trim();
+
+            db.SubmitChanges();
+
+            MessageBox.Show("Cập nhật thông tin lớp học thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            HienThiDuLieuLenBang(txtTimKiem.Text);
+            btnLamMoi_Click(sender, e);
         }
 
+        // ==============================
+        // XÓA LỚP HỌC
+        // ==============================
         private void btnXoa_Click(object sender, EventArgs e)
         {
-            if (MessageBox.Show("Bạn có chắc muốn xóa lớp học này?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (txtMaID.Text == "")
             {
-                for (int i = dtToanBoLopHoc.Rows.Count - 1; i >= 0; i--)
-                {
-                    if (dtToanBoLopHoc.Rows[i]["MaID"].ToString() == txtMaID.Text)
-                    {
-                        dtToanBoLopHoc.Rows.RemoveAt(i);
-                        break;
-                    }
-                }
-                HienThiDuLieuLenBang(txtTimKiem.Text);
-                btnLamMoi_Click(sender, e);
+                MessageBox.Show("Vui lòng chọn lớp học cần xóa!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
+
+            int maID = int.Parse(txtMaID.Text);
+
+            var lop = db.tbl_lophocs.FirstOrDefault(lh => lh.MaID == maID);
+
+            if (lop == null)
+            {
+                MessageBox.Show("Không tìm thấy lớp học!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            bool coSinhVien = db.tbl_sinhviens.Any(sv => sv.MaLop == lop.MaLop);
+
+            if (coSinhVien)
+            {
+                MessageBox.Show("Không thể xóa lớp này vì đang có sinh viên thuộc lớp!", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DialogResult result = MessageBox.Show(
+                "Bạn có chắc muốn xóa lớp học này?",
+                "Xác nhận",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (result == DialogResult.No)
+            {
+                return;
+            }
+
+            db.tbl_lophocs.DeleteOnSubmit(lop);
+            db.SubmitChanges();
+
+            MessageBox.Show("Xóa lớp học thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            HienThiDuLieuLenBang(txtTimKiem.Text);
+            btnLamMoi_Click(sender, e);
         }
 
+        // ==============================
+        // LÀM MỚI
+        // ==============================
         private void btnLamMoi_Click(object sender, EventArgs e)
         {
             txtMaID.Clear();
@@ -188,16 +250,22 @@ namespace LoginApp
             txtTenLop.Clear();
             txtGhiChu.Clear();
 
-            txtMaID.Enabled = true; // MỞ KHÓA LẠI Ô MÃ ID ĐỂ THÊM MỚI
-            txtMaID.Focus();
+            txtMaID.Enabled = false;
+            txtMaLop.Focus();
         }
 
+        // ==============================
+        // TÌM KIẾM
+        // ==============================
         private void btnTim_Click(object sender, EventArgs e)
         {
             currentPage = 1;
-            HienThiDuLieuLenBang(txtTimKiem.Text);
+            HienThiDuLieuLenBang(txtTimKiem.Text.Trim());
         }
 
+        // ==============================
+        // XEM DANH SÁCH SINH VIÊN THEO LỚP
+        // ==============================
         private void btnXemDSSV_Click(object sender, EventArgs e)
         {
             if (txtMaLop.Text == "")
@@ -206,28 +274,47 @@ namespace LoginApp
                 return;
             }
 
-            MessageBox.Show($"Tính năng này sẽ được code để tự động mở trang Quản lý Sinh viên và lọc ra những bạn thuộc {txtMaLop.Text}.", "Đang phát triển", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            int soLuong = db.tbl_sinhviens.Count(sv => sv.MaLop == txtMaLop.Text.Trim());
+
+            MessageBox.Show(
+                "Lớp " + txtMaLop.Text + " hiện có " + soLuong + " sinh viên.",
+                "Danh sách sinh viên theo lớp",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
         }
 
-        // === 5. CÁC NÚT PHÂN TRANG ===
+        // ==============================
+        // PHÂN TRANG
+        // ==============================
         private void btnNext_Click(object sender, EventArgs e)
         {
-            if (currentPage < totalPages) { currentPage++; HienThiDuLieuLenBang(txtTimKiem.Text); }
+            if (currentPage < totalPages)
+            {
+                currentPage++;
+                HienThiDuLieuLenBang(txtTimKiem.Text);
+            }
         }
 
         private void btnPrev_Click(object sender, EventArgs e)
         {
-            if (currentPage > 1) { currentPage--; HienThiDuLieuLenBang(txtTimKiem.Text); }
+            if (currentPage > 1)
+            {
+                currentPage--;
+                HienThiDuLieuLenBang(txtTimKiem.Text);
+            }
         }
 
         private void btnFirst_Click(object sender, EventArgs e)
         {
-            if (currentPage != 1) { currentPage = 1; HienThiDuLieuLenBang(txtTimKiem.Text); }
+            currentPage = 1;
+            HienThiDuLieuLenBang(txtTimKiem.Text);
         }
 
         private void btnLast_Click(object sender, EventArgs e)
         {
-            if (currentPage != totalPages) { currentPage = totalPages; HienThiDuLieuLenBang(txtTimKiem.Text); }
+            currentPage = totalPages;
+            HienThiDuLieuLenBang(txtTimKiem.Text);
         }
 
         // === 6. NHỮNG HÀM RÁC (Lỡ nhấp đúp - Giữ nguyên để tránh lỗi giao diện) ===

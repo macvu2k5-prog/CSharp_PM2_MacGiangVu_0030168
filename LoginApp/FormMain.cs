@@ -16,6 +16,8 @@ namespace LoginApp
         public FormMain()
         {
             InitializeComponent();
+
+            OpenChildForm(new FormSinhVien()); 
         }
         private void OpenChildForm(Form childForm)
         {
@@ -24,16 +26,17 @@ namespace LoginApp
             {
                 currentFormChild.Close();
             }
+
             currentFormChild = childForm;
 
-            // Xóa viền của Form con và ép nó vừa vặn vào panel1
             childForm.TopLevel = false;
             childForm.FormBorderStyle = FormBorderStyle.None;
             childForm.Dock = DockStyle.Fill;
 
-            // Đưa Form con lên panel1 và hiển thị ra
+            pn1Content.Controls.Clear();
             pn1Content.Controls.Add(childForm);
             pn1Content.Tag = childForm;
+
             childForm.BringToFront();
             childForm.Show();
         }
