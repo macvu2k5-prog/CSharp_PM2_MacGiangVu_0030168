@@ -270,18 +270,20 @@ namespace LoginApp
         {
             if (txtMaLop.Text == "")
             {
-                MessageBox.Show("Vui lòng chọn 1 lớp để xem danh sách sinh viên!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(
+                    "Vui lòng chọn 1 lớp để xem danh sách sinh viên!",
+                    "Thông báo",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
                 return;
             }
 
-            int soLuong = db.tbl_sinhviens.Count(sv => sv.MaLop == txtMaLop.Text.Trim());
+            string maLop = txtMaLop.Text.Trim();
+            string tenLop = txtTenLop.Text.Trim();
 
-            MessageBox.Show(
-                "Lớp " + txtMaLop.Text + " hiện có " + soLuong + " sinh viên.",
-                "Danh sách sinh viên theo lớp",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            );
+            FormDSSV frm = new FormDSSV(maLop, tenLop);
+            frm.ShowDialog();
         }
 
         // ==============================
