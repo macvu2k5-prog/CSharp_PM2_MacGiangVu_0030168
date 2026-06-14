@@ -18,6 +18,7 @@ namespace LoginApp
         private int pageSize = 5;
         private int totalRecords = 0;
         private int totalPages = 1;
+        private string currentKeyword = ""; 
         private DataTable dtToanBoSinhVien = new DataTable();
 
         public FormSinhVien()
@@ -63,6 +64,16 @@ namespace LoginApp
             cboLop.SelectedIndex = -1;
         }
 
+
+        private void CapNhatTrangThaiPhanTrang()
+        {
+            btnFirst.Enabled = currentPage > 1;
+            btnPrev.Enabled = currentPage > 1;
+
+            btnNext.Enabled = currentPage < totalPages;
+            btnLast.Enabled = currentPage < totalPages;
+        }
+
         // ==============================
         // HIỂN THỊ DANH SÁCH SINH VIÊN
         // ==============================
@@ -83,6 +94,7 @@ namespace LoginApp
             }
 
             totalRecords = query.Count();
+
             totalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
 
             if (totalPages == 0)
@@ -93,6 +105,11 @@ namespace LoginApp
             if (currentPage > totalPages)
             {
                 currentPage = totalPages;
+            }
+
+            if (currentPage < 1)
+            {
+                currentPage = 1;
             }
 
             var dsSinhVien = query
@@ -111,6 +128,8 @@ namespace LoginApp
                     sv.MaLop
                 );
             }
+
+            CapNhatTrangThaiPhanTrang();
         }
 
         // ==============================
@@ -176,7 +195,7 @@ namespace LoginApp
             MessageBox.Show("Thêm sinh viên thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             currentPage = totalPages;
-            HienThiDuLieuLenBang(txtTimKiem.Text);
+            HienThiDuLieuLenBang(currentKeyword);
             btnLamMoi_Click(sender, e);
         }
 
@@ -210,7 +229,7 @@ namespace LoginApp
 
             MessageBox.Show("Cập nhật thông tin thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-            HienThiDuLieuLenBang(txtTimKiem.Text);
+            HienThiDuLieuLenBang(currentKeyword);
             btnLamMoi_Click(sender, e);
         }
 
@@ -250,7 +269,7 @@ namespace LoginApp
 
             MessageBox.Show("Xóa sinh viên thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-            HienThiDuLieuLenBang(txtTimKiem.Text);
+            HienThiDuLieuLenBang(currentKeyword);
             btnLamMoi_Click(sender, e);
         }
 
@@ -276,8 +295,10 @@ namespace LoginApp
         // ==============================
         private void btnTim_Click(object sender, EventArgs e)
         {
+            currentKeyword = txtTimKiem.Text.Trim();
             currentPage = 1;
-            HienThiDuLieuLenBang(txtTimKiem.Text.Trim());
+
+            HienThiDuLieuLenBang(currentKeyword);
         }
 
         // ==============================
@@ -288,30 +309,25 @@ namespace LoginApp
             if (currentPage < totalPages)
             {
                 currentPage++;
-                HienThiDuLieuLenBang(txtTimKiem.Text);
+                HienThiDuLieuLenBang(currentKeyword);
             }
         }
 
-        private void btnPrev_Click(object sender, EventArgs e)
-        {
-            if (currentPage > 1)
-            {
-                currentPage--;
-                HienThiDuLieuLenBang(txtTimKiem.Text);
-            }
-        }
+
 
         private void btnFirst_Click(object sender, EventArgs e)
         {
             currentPage = 1;
-            HienThiDuLieuLenBang(txtTimKiem.Text);
+            HienThiDuLieuLenBang(currentKeyword);
         }
 
         private void btnLast_Click(object sender, EventArgs e)
         {
             currentPage = totalPages;
-            HienThiDuLieuLenBang(txtTimKiem.Text);
+            HienThiDuLieuLenBang(currentKeyword);
         }
+
+
 
         // === 7. NHỮNG HÀM RÁC ===
         private void button1_Click(object sender, EventArgs e) { }
@@ -324,5 +340,14 @@ namespace LoginApp
         private void cboLop_SelectedIndexChanged(object sender, EventArgs e) { }
         private void txtTimKiem_TextChanged(object sender, EventArgs e) { }
         private void GroupBox_Enter(object sender, EventArgs e) { }
+
+        private void btnPrew_Click(object sender, EventArgs e)
+        {
+            if (currentPage > 1)
+            {
+                currentPage--;
+                HienThiDuLieuLenBang(currentKeyword);
+            }
+        }
     }
 }
